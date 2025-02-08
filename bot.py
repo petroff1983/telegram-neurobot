@@ -24,14 +24,21 @@ dp = Dispatcher()
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Пути к файлу базы знаний
+# Пути к файлам
 KNOWLEDGE_FILE = "knowledge.txt"
+INSTRUCTION_FILE = "instruction.txt"
+
+# Загрузка инструкции
+if os.path.exists(INSTRUCTION_FILE):
+    with open(INSTRUCTION_FILE, "r", encoding="utf-8") as f:
+        system_instruction = f.read().strip()
+    print("✅ Инструкция загружена.")
+else:
+    system_instruction = "Ты – эксперт, используй только указанный контекст."
+    print("⚠ Файл instruction.txt не найден! Используется стандартная инструкция.")
 
 # Функция разбиения текста на чанки
 def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100):
-    """
-    Разбивает текст на чанки заданного размера с перекрытием.
-    """
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=overlap)
     chunks = text_splitter.split_text(text)
     return [Document(page_content=chunk) for chunk in chunks]
@@ -72,36 +79,28 @@ def ask_ai(query: str) -> str:
     context = ""
 
     if vector_store:
-        docs = vector_store.similarity_search(query, k=2)  # Ищем 2 самых релевантных чанка
+        docs = vector_store.similarity_search(query, k=2)
         if docs:
             context = "\n".join([doc.page_content for doc in docs])
-            print(f"🔍 Найден контекст: {context}")  # Лог для проверки работы FAISS
+            print(f"🔍 Найден контекст: {context}")
 
     if not context:
-        # Вежливый отказ
         return (
             "Извините, но я консультирую только по техническому регламенту Таможенного союза "
             "о безопасности железнодорожного подвижного состава. "
             "Вам стоит обратиться к профильным специалистам или официальным источникам информации."
         )
 
-    prompt = f"""
-Ты – консультант по техническому регламенту Таможенного союза "О БЕЗОПАСНОСТИ ЖЕЛЕЗНОДОРОЖНОГО ПОДВИЖНОГО СОСТАВА".
-Ты должен отвечать **ТОЛЬКО ПО БАЗЕ ЗНАНИЙ**.
-Если информации нет в базе, **вежливо отказывайся**.
-
-Контекст из базы:
-{context}
-
-Вопрос: {query}
-"""
+    prompt = f"Контекст из базы:\n{context}\n\nВопрос: {query}"
 
     client = openai.Client(api_key=OPENAI_API_KEY)
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
-            messages=[{"role": "system", "content": "Ты – эксперт, используй только указанный контекст."},
-                      {"role": "user", "content": prompt}]
+            messages=[
+                {"role": "system", "content": system_instruction},  # Инструкция загружается из файла
+                {"role": "user", "content": prompt}
+            ]
         )
         return response.choices[0].message.content
     except Exception as e:
