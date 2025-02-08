@@ -1,0 +1,6 @@
+aiogram
+openai
+langchain
+langchain_openai
+faiss-cpu
+tiktoken
