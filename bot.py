@@ -15,7 +15,7 @@ from langchain.docstore.document import Document
 
 # Настройки бота
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-OPENAI_API_KEY = os.getenv("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")
+OPENAI_API_KEY = "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"
 
 # Проверяем, загружен ли ключ
 if not OPENAI_API_KEY:
