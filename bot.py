@@ -2,7 +2,6 @@ import os
 import logging
 import openai
 import asyncio
-import shutil
 from aiogram import Bot, Dispatcher, types
 from aiogram.types import Message
 from aiogram.filters import CommandStart
@@ -25,9 +24,7 @@ dp = Dispatcher()
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Пути к файлам
-INDEX_FOLDER = "faiss_index"
-INDEX_ZIP = "faiss_index.zip"
+# Пути к файлу базы знаний
 KNOWLEDGE_FILE = "knowledge.txt"
 
 # Функция разбиения текста на чанки
@@ -39,29 +36,23 @@ def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100)
     chunks = text_splitter.split_text(text)
     return [Document(page_content=chunk) for chunk in chunks]
 
-# Проверяем, загружен ли FAISS-индекс
-if os.path.exists(INDEX_ZIP):
-    shutil.unpack_archive(INDEX_ZIP, INDEX_FOLDER)
-    vector_store = FAISS.load_local(INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
-    print("✅ FAISS-индекс загружен из архива.")
-else:
-    if os.path.exists(KNOWLEDGE_FILE):
-        with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
-            knowledge_text = f.read()
-        print(f"🔍 База знаний загружена. Размер: {len(knowledge_text)} символов.")
+# Загрузка базы знаний и создание FAISS-индекса на лету
+if os.path.exists(KNOWLEDGE_FILE):
+    with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
+        knowledge_text = f.read()
+    print(f"🔍 База знаний загружена. Размер: {len(knowledge_text)} символов.")
 
-        # Разбиваем на чанки и создаем FAISS
-        docs = split_text_into_chunks(knowledge_text, chunk_size=500, overlap=100)
-        if docs:
-            vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
-            vector_store.save_local(INDEX_FOLDER)
-            print("✅ FAISS-индекс успешно создан и сохранён!")
-        else:
-            print("❌ Ошибка: база знаний пуста или не разбита на чанки!")
-            vector_store = None
+    # Разбиваем на чанки и создаем FAISS
+    docs = split_text_into_chunks(knowledge_text, chunk_size=500, overlap=100)
+    if docs:
+        vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+        print("✅ FAISS-индекс успешно создан в памяти!")
     else:
-        print("❌ Файл knowledge.txt не найден!")
+        print("❌ Ошибка: база знаний пуста или не разбита на чанки!")
         vector_store = None
+else:
+    print("❌ Файл knowledge.txt не найден!")
+    vector_store = None
 
 # Функция обработки команды /start
 @dp.message(CommandStart())
