@@ -1,33 +1,27 @@
 import requests
-
-TELEGRAM_BOT_TOKEN = ""
-
-# Удаляем Webhook перед запуском Polling
-requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook")
-
 import os
 import logging
 import openai
 import asyncio
-import faiss
-import pickle
 import shutil
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import CommandStart
 from langchain_openai import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.docstore.document import Document
 
-# Настройки бота
-TELEGRAM_BOT_TOKEN = ""
-OPENAI_API_KEY = ""
+# Загружаем токены из переменных окружения
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
-# Проверяем, загружен ли ключ
+# Проверяем, загружены ли ключи
+if not TELEGRAM_BOT_TOKEN:
+    raise ValueError("❌ Отсутствует TELEGRAM_BOT_TOKEN. Добавьте его в переменные Railway.")
 if not OPENAI_API_KEY:
-    raise ValueError(
-        "Отсутствует OPENAI_API_KEY. Добавьте его в переменные Railway.")
+    raise ValueError("❌ Отсутствует OPENAI_API_KEY. Добавьте его в переменные Railway.")
+
+# Удаляем Webhook перед запуском Polling
+requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook")
 
 # Устанавливаем ключ API OpenAI
 os.environ["OPENAI_API_KEY"] = OPENAI_API_KEY
@@ -43,23 +37,23 @@ logging.basicConfig(level=logging.INFO)
 INDEX_FOLDER = "faiss_index"
 INDEX_ZIP = "faiss_index.zip"
 
+vector_store = None
 if os.path.exists(INDEX_ZIP):
     shutil.unpack_archive(INDEX_ZIP, INDEX_FOLDER)
-    vector_store = FAISS.load_local(INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    try:
+        vector_store = FAISS.load_local(INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+        logging.info("✅ FAISS-индекс загружен успешно.")
+    except Exception as e:
+        logging.error(f"⚠️ Ошибка при загрузке FAISS-индекса: {e}")
 else:
-    print("⚠️ FAISS-индекс не найден, создаю пустой векторный стор.")
-    vector_store = None
+    logging.warning("⚠️ FAISS-индекс не найден. Бот будет работать без контекста.")
 
 # Функция обработки команды /start
-
-
 @dp.message(CommandStart())
 async def start_handler(message: Message):
     await message.answer("Привет! Я нейроконсультант 🤖. Задавай вопросы, и я помогу!")
 
 # Функция обработки текстовых сообщений
-
-
 @dp.message(lambda message: message.text)
 async def process_message(message: Message):
     user_input = message.text
@@ -67,8 +61,6 @@ async def process_message(message: Message):
     await message.answer(response)
 
 # Функция запроса к FAISS и OpenAI
-
-
 def ask_ai(query: str) -> str:
     global vector_store
     if vector_store:
@@ -87,8 +79,6 @@ def ask_ai(query: str) -> str:
         return f"Ошибка при запросе к OpenAI: {e}"
 
 # Запуск бота
-
-
 async def main():
     await dp.start_polling(bot)
 
