@@ -74,20 +74,40 @@ def ask_ai(query: str) -> str:
 
     if vector_store:
         docs = vector_store.similarity_search(query, k=2)  # Ищем 2 самых релевантных чанка
-        context = "\n".join([doc.page_content for doc in docs])
+        if docs:
+            context = "\n".join([doc.page_content for doc in docs])
 
-    prompt = f"Контекст:\n{context}\n\nВопрос: {query}"
+    if not context:
+        # Вежливый отказ
+        return (
+            "Извините, но я консультирую только по техническому регламенту Таможенного союза "
+            "о безопасности железнодорожного подвижного состава. "
+            "Вам стоит обратиться к профильным специалистам или официальным источникам информации."
+        )
+
+    prompt = f"""
+Ты – консультант по техническому регламенту Таможенного союза "О БЕЗОПАСНОСТИ ЖЕЛЕЗНОДОРОЖНОГО ПОДВИЖНОГО СОСТАВА".
+Твоя единственная цель – давать точные и профессиональные ответы по этому регламенту.
+Не придумывай ничего от себя. 
+Отвечай строго на основе следующего контекста:
+
+Контекст:
+{context}
+
+Вопрос: {query}
+"""
 
     client = openai.Client(api_key=OPENAI_API_KEY)
     try:
         response = client.chat.completions.create(
             model="gpt-4-turbo",
-            messages=[{"role": "system", "content": "Ты - эксперт, используй контекст при ответе."},
+            messages=[{"role": "system", "content": "Ты – эксперт, используй только указанный контекст."},
                       {"role": "user", "content": prompt}]
         )
         return response.choices[0].message.content
     except Exception as e:
         return f"Ошибка при запросе к OpenAI: {e}"
+
 
 # Запуск бота
 async def main():
