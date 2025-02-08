@@ -19,6 +19,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 # Проверяем, загружен ли ключ
 if not OPENAI_API_KEY:
+    print("Переменные окружения:", os.environ)
     raise ValueError("Отсутствует OPENAI_API_KEY. Добавьте его в переменные Railway.")
 
 # Устанавливаем ключ API OpenAI
