@@ -1,6 +1,6 @@
 import requests
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = "8022323485:AAEfenu6pXnhvig1fn-HMvnmxmO9zQPSBJY"
 
 # Удаляем Webhook перед запуском Polling
 requests.get(f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/deleteWebhook")
