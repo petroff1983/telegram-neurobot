@@ -33,6 +33,23 @@ dp = Dispatcher()
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
+# Читаем базу знаний
+KNOWLEDGE_FILE = "knowledge.txt"
+INSTRUCTION_FILE = "instruction.txt"
+
+if os.path.exists(KNOWLEDGE_FILE):
+    with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
+        knowledge = f.read()
+else:
+    knowledge = "⚠️ ВНИМАНИЕ: База знаний не загружена!"
+
+# Читаем инструкцию
+if os.path.exists(INSTRUCTION_FILE):
+    with open(INSTRUCTION_FILE, "r", encoding="utf-8") as f:
+        instruction = f.read()
+else:
+    instruction = "⚠️ ВНИМАНИЕ: Инструкция не загружена!"
+
 # Загрузка FAISS-индекса
 INDEX_FOLDER = "faiss_index"
 INDEX_ZIP = "faiss_index.zip"
@@ -63,16 +80,22 @@ async def process_message(message: Message):
 # Функция запроса к FAISS и OpenAI
 def ask_ai(query: str) -> str:
     global vector_store
+    context = ""
+
+    # Если есть база знаний, добавляем её в контекст
     if vector_store:
         docs = vector_store.similarity_search(query, k=2)
         context = "\n".join([doc.page_content for doc in docs])
-        query = f"Контекст:\n{context}\n\nВопрос: {query}"
+    
+    # Формируем полный запрос
+    query = f"{instruction}\n\nКонтекст:\n{knowledge}\n{context}\n\nВопрос: {query}"
 
-    client = openai.Client(api_key=OPENAI_API_KEY)  # Новый формат клиента
+    client = openai.Client(api_key=OPENAI_API_KEY)
     try:
-        response = client.chat.completions.create(  # Новый синтаксис запроса
+        response = client.chat.completions.create(
             model="gpt-4-turbo",
-            messages=[{"role": "user", "content": query}]
+            messages=[{"role": "system", "content": "Ты - эксперт, используй контекст при ответе."},
+                      {"role": "user", "content": query}]
         )
         return response.choices[0].message.content
     except Exception as e:
