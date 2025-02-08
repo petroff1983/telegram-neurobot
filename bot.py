@@ -68,13 +68,13 @@ def ask_ai(query: str) -> str:
         context = "\n".join([doc.page_content for doc in docs])
         query = f"Контекст:\n{context}\n\nВопрос: {query}"
 
-    openai.api_key = OPENAI_API_KEY  # Устанавливаем ключ API
+    client = openai.Client(api_key=OPENAI_API_KEY)  # Новый формат клиента
     try:
-        response = openai.ChatCompletion.create(
+        response = client.chat.completions.create(  # Новый синтаксис запроса
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": query}]
         )
-        return response['choices'][0]['message']['content']
+        return response.choices[0].message.content
     except Exception as e:
         return f"Ошибка при запросе к OpenAI: {e}"
 
