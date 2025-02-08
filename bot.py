@@ -25,15 +25,6 @@ dp = Dispatcher()
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-# Проверяем, есть ли knowledge.txt
-if os.path.exists(KNOWLEDGE_FILE):
-    with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
-        knowledge_text = f.read()
-    print(f"🔍 База знаний загружена. Размер: {len(knowledge_text)} символов")
-else:
-    print("❌ Файл knowledge.txt не найден!")
-
-
 # Пути к файлам
 INDEX_FOLDER = "faiss_index"
 INDEX_ZIP = "faiss_index.zip"
@@ -48,35 +39,34 @@ def split_text_into_chunks(text: str, chunk_size: int = 500, overlap: int = 100)
     chunks = text_splitter.split_text(text)
     return [Document(page_content=chunk) for chunk in chunks]
 
-# Проверяем, есть ли база знаний и FAISS-индекс
+# Проверяем, загружен ли FAISS-индекс
 if os.path.exists(INDEX_ZIP):
     shutil.unpack_archive(INDEX_ZIP, INDEX_FOLDER)
     vector_store = FAISS.load_local(INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    print("✅ FAISS-индекс загружен из архива.")
 else:
     if os.path.exists(KNOWLEDGE_FILE):
         with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
             knowledge_text = f.read()
+        print(f"🔍 База знаний загружена. Размер: {len(knowledge_text)} символов.")
 
         # Разбиваем на чанки и создаем FAISS
         docs = split_text_into_chunks(knowledge_text, chunk_size=500, overlap=100)
-        vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
-        vector_store.save_local(INDEX_FOLDER)
+        if docs:
+            vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+            vector_store.save_local(INDEX_FOLDER)
+            print("✅ FAISS-индекс успешно создан и сохранён!")
+        else:
+            print("❌ Ошибка: база знаний пуста или не разбита на чанки!")
+            vector_store = None
     else:
+        print("❌ Файл knowledge.txt не найден!")
         vector_store = None
-
-docs = split_text_into_chunks(knowledge_text, chunk_size=500, overlap=100)
-if not docs:
-    print("❌ Ошибка: база знаний пуста или не разбита на чанки!")
-
-vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
-vector_store.save_local(INDEX_FOLDER)
-print("✅ FAISS-индекс успешно создан и сохранён!")
-
 
 # Функция обработки команды /start
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    await message.answer("Привет! Я нейроконсультант 🤖. Задавай вопросы, и я помогу!")
+    await message.answer("Привет! Я консультант по техническому регламенту Таможенного союза. Задавайте вопросы!")
 
 # Функция обработки текстовых сообщений
 @dp.message()
@@ -94,6 +84,7 @@ def ask_ai(query: str) -> str:
         docs = vector_store.similarity_search(query, k=2)  # Ищем 2 самых релевантных чанка
         if docs:
             context = "\n".join([doc.page_content for doc in docs])
+            print(f"🔍 Найден контекст: {context}")  # Лог для проверки работы FAISS
 
     if not context:
         # Вежливый отказ
@@ -105,11 +96,10 @@ def ask_ai(query: str) -> str:
 
     prompt = f"""
 Ты – консультант по техническому регламенту Таможенного союза "О БЕЗОПАСНОСТИ ЖЕЛЕЗНОДОРОЖНОГО ПОДВИЖНОГО СОСТАВА".
-Твоя единственная цель – давать точные и профессиональные ответы по этому регламенту.
-Не придумывай ничего от себя. 
-Отвечай строго на основе следующего контекста:
+Ты должен отвечать **ТОЛЬКО ПО БАЗЕ ЗНАНИЙ**.
+Если информации нет в базе, **вежливо отказывайся**.
 
-Контекст:
+Контекст из базы:
 {context}
 
 Вопрос: {query}
@@ -125,7 +115,6 @@ def ask_ai(query: str) -> str:
         return response.choices[0].message.content
     except Exception as e:
         return f"Ошибка при запросе к OpenAI: {e}"
-
 
 # Запуск бота
 async def main():
