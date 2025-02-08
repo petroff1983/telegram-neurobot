@@ -60,7 +60,7 @@ async def start_handler(message: Message):
 # Функция обработки текстовых сообщений
 
 
-@dp.message()
+@dp.message(lambda message: message.text)
 async def process_message(message: Message):
     user_input = message.text
     response = ask_ai(user_input)
