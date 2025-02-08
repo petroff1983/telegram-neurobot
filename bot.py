@@ -57,7 +57,7 @@ else:
 # Функция обработки команды /start
 @dp.message(CommandStart())
 async def start_handler(message: Message):
-    await message.answer("Привет! Я консультант по техническому регламенту Таможенного союза. Задавайте вопросы!")
+    await message.answer("Привет! Чем могу помочь!")
 
 # Функция обработки текстовых сообщений
 @dp.message()
