@@ -38,9 +38,9 @@ INDEX_ZIP = "faiss_index.zip"
 
 if os.path.exists(INDEX_ZIP):
     shutil.unpack_archive(INDEX_ZIP, INDEX_FOLDER)
-    vector_store = FAISS.load_local(
-        INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
+    vector_store = FAISS.load_local(INDEX_FOLDER, OpenAIEmbeddings(), allow_dangerous_deserialization=True)
 else:
+    print("⚠️ FAISS-индекс не найден, создаю пустой векторный стор.")
     vector_store = None
 
 # Функция обработки команды /start
