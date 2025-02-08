@@ -68,9 +68,9 @@ def ask_ai(query: str) -> str:
         context = "\n".join([doc.page_content for doc in docs])
         query = f"Контекст:\n{context}\n\nВопрос: {query}"
 
-    client = openai.OpenAI(api_key=OPENAI_API_KEY)
+    openai.api_key = OPENAI_API_KEY  # Устанавливаем ключ API
     try:
-        response = client.ChatCompletion.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": query}]
         )
