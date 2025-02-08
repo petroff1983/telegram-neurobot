@@ -82,13 +82,13 @@ def ask_ai(query: str) -> str:
     global vector_store
     context = ""
 
-    # Если есть база знаний, добавляем её в контекст
+    # ОГРАНИЧИВАЕМ количество результатов (например, до 1-2)
     if vector_store:
-        docs = vector_store.similarity_search(query, k=2)
-        context = "\n".join([doc.page_content for doc in docs])
-    
-    # Формируем полный запрос
-    query = f"{instruction}\n\nКонтекст:\n{knowledge}\n{context}\n\nВопрос: {query}"
+        docs = vector_store.similarity_search(query, k=1)  # Было k=2
+        context = "\n".join([doc.page_content[:500] for doc in docs])  # Ограничиваем до 500 символов
+
+    # Формируем итоговый запрос
+    query = f"{instruction[:500]}\n\nКонтекст:\n{knowledge[:1000]}\n{context}\n\nВопрос: {query}"  # Ограничиваем текст
 
     client = openai.Client(api_key=OPENAI_API_KEY)
     try:
