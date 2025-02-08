@@ -14,7 +14,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.docstore.document import Document
 
 # Настройки бота
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_BOT_TOKEN = "8022323485:AAEfenu6pXnhvig1fn-HMvnmxmO9zQPSBJY"
 OPENAI_API_KEY = "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"
 
 # Проверяем, загружен ли ключ
