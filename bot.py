@@ -25,6 +25,15 @@ dp = Dispatcher()
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
+# Проверяем, есть ли knowledge.txt
+if os.path.exists(KNOWLEDGE_FILE):
+    with open(KNOWLEDGE_FILE, "r", encoding="utf-8") as f:
+        knowledge_text = f.read()
+    print(f"🔍 База знаний загружена. Размер: {len(knowledge_text)} символов")
+else:
+    print("❌ Файл knowledge.txt не найден!")
+
+
 # Пути к файлам
 INDEX_FOLDER = "faiss_index"
 INDEX_ZIP = "faiss_index.zip"
@@ -54,6 +63,15 @@ else:
         vector_store.save_local(INDEX_FOLDER)
     else:
         vector_store = None
+
+docs = split_text_into_chunks(knowledge_text, chunk_size=500, overlap=100)
+if not docs:
+    print("❌ Ошибка: база знаний пуста или не разбита на чанки!")
+
+vector_store = FAISS.from_documents(docs, OpenAIEmbeddings())
+vector_store.save_local(INDEX_FOLDER)
+print("✅ FAISS-индекс успешно создан и сохранён!")
+
 
 # Функция обработки команды /start
 @dp.message(CommandStart())
